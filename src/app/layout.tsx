@@ -16,6 +16,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Expense Tracker",
   description: "Track and manage your personal expenses",
+  icons: {
+    icon: "/dollar-favicon.svg",
+    shortcut: "/dollar-favicon.svg",
+    apple: "/dollar-favicon.svg",
+  },
 };
 
 export default function RootLayout({
