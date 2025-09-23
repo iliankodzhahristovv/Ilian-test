@@ -61,7 +61,8 @@ export async function addExpense(expense: Omit<Expense, 'id' | 'user_id' | 'crea
 // Update expense
 export async function updateExpense(id: string, updates: Partial<Expense>): Promise<Expense | null> {
   try {
-    // Remove user_id from updates to prevent modification
+    // Remove user_id from updates to prevent modification  
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { user_id, ...safeUpdates } = updates
 
     const { data, error } = await supabase

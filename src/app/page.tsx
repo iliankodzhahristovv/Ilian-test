@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react'
 import { getExpenses, addExpense, updateExpense, deleteExpense } from '@/lib/expenses'
 import type { Expense } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
-import { trackEvent } from '@/lib/posthog'
 import Auth from '@/components/Auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Filter, DollarSign, Calendar, TrendingUp, MoreHorizontal, Edit, Trash2, Copy, ArrowUpDown, ChevronUp, ChevronDown, ChevronRight, Menu, Home, Settings, BarChart3, X } from 'lucide-react'
+import { Plus, Filter, DollarSign, Calendar, TrendingUp, Edit, Trash2, Copy, ArrowUpDown, ChevronUp, ChevronDown, ChevronRight, Menu, Home, Settings, BarChart3, X } from 'lucide-react'
 import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
 // Utility function for category colors (badges)
@@ -31,21 +30,6 @@ const getCategoryColor = (category: string) => {
   return colors[category] || 'bg-gray-100 text-gray-800'
 }
 
-// Utility function for solid category colors (charts/progress bars)
-const getCategorySolidColor = (category: string) => {
-  const colors: { [key: string]: string } = {
-    'Food': 'bg-green-500',
-    'Gas': 'bg-yellow-500',
-    'Entertainment': 'bg-red-500',
-    'Planned': 'bg-blue-500',
-    'Car': 'bg-purple-500',
-    'Fitness': 'bg-emerald-500',
-    'Clothes': 'bg-yellow-400',
-    'Necessary': 'bg-orange-500',
-    'Barber': 'bg-gray-500',
-  }
-  return colors[category] || 'bg-gray-500'
-}
 
 
 // Settings Page Component
@@ -241,17 +225,6 @@ function ChartsPage({ expenses }: { expenses: Expense[] }) {
     }
   }, [categoryData, selectedCategory])
 
-  const categoryColors = {
-    Entertainment: "bg-pink-500",
-    Gas: "bg-yellow-500", 
-    Food: "bg-green-500",
-    Necessary: "bg-orange-500",
-    Car: "bg-purple-500",
-    Planned: "bg-blue-500",
-    Clothes: "bg-yellow-600",
-    Fitness: "bg-emerald-500",
-    Barber: "bg-gray-500",
-  }
 
   const categoryBadgeColors = {
     Entertainment: "bg-pink-100 text-pink-800 hover:bg-pink-200",
@@ -330,8 +303,8 @@ function ChartsPage({ expenses }: { expenses: Expense[] }) {
                   </div>
 
                   <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%" margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-                      <LineChart data={yearlyChartData[selectedCategory]} margin={{ top: 10, right: 20, left: 20, bottom: 10 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={yearlyChartData[selectedCategory]}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                         <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#6b7280" }} />
                         <YAxis
@@ -348,7 +321,7 @@ function ChartsPage({ expenses }: { expenses: Expense[] }) {
                             borderRadius: "8px",
                             boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
                           }}
-                          formatter={(value: any) => [`${value} лв`, selectedCategory]}
+                          formatter={(value: number) => [`${value} лв`, selectedCategory]}
                         />
                         <Line
                           type="monotone"
@@ -374,7 +347,7 @@ function ChartsPage({ expenses }: { expenses: Expense[] }) {
 function ExpenseTracker() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -392,7 +365,6 @@ function ExpenseTracker() {
     date: ''
   })
   const [filterCategory, setFilterCategory] = useState<string>('')
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [sortConfig, setSortConfig] = useState<{
     column: 'date' | 'category' | 'amount' | 'description'
     direction: 'asc' | 'desc'
@@ -408,7 +380,7 @@ function ExpenseTracker() {
     
     expenses.forEach(expense => {
       // Parse DD/MM/YYYY to get YYYY-MM
-      const [day, month, year] = expense.date.split('/')
+      const [, month, year] = expense.date.split('/')
       const monthKey = `${year}-${month.padStart(2, '0')}`
       
       if (!grouped.has(monthKey)) {
@@ -458,24 +430,11 @@ function ExpenseTracker() {
   const getCurrentYearExpenses = (expenses: Expense[]) => {
     const currentYear = new Date().getFullYear().toString()
     return expenses.filter(expense => {
-      const [day, month, year] = expense.date.split('/')
+      const [, , year] = expense.date.split('/')
       return year === currentYear
     })
   }
 
-  // Get current calendar month expenses
-  const getCurrentMonthExpenses = (expenses: Expense[]) => {
-    const now = new Date()
-    const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0')
-    const currentYear = now.getFullYear().toString()
-    const currentMonthKey = `${currentYear}-${currentMonth}`
-    
-    return expenses.filter(expense => {
-      const [day, month, year] = expense.date.split('/')
-      const expenseMonthKey = `${year}-${month.padStart(2, '0')}`
-      return expenseMonthKey === currentMonthKey
-    })
-  }
 
   // Calculate smart average (total / months with expenses, not all 12 months)
   const calculateSmartAverage = (expenses: Expense[]) => {
@@ -483,7 +442,7 @@ function ExpenseTracker() {
     
     const monthsWithExpenses = new Set()
     expenses.forEach(expense => {
-      const [day, month, year] = expense.date.split('/')
+      const [, month, year] = expense.date.split('/')
       monthsWithExpenses.add(`${year}-${month.padStart(2, '0')}`)
     })
     
@@ -518,7 +477,7 @@ function ExpenseTracker() {
 
   const filteredAndSortedExpenses = (() => {
     // First apply category filter
-    let filtered = filterCategory 
+    const filtered = filterCategory 
     ? expenses.filter(expense => expense.category === filterCategory)
     : expenses
 
@@ -567,7 +526,7 @@ function ExpenseTracker() {
     if (selectedMonth && expandedMonths.has(selectedMonth)) {
       // Show selected month statistics
       const selectedMonthExpenses = filteredAndSortedExpenses.filter(expense => {
-        const [day, month, year] = expense.date.split('/')
+        const [, month, year] = expense.date.split('/')
         const expenseMonthKey = `${year}-${month.padStart(2, '0')}`
         return expenseMonthKey === selectedMonth
       })
@@ -775,7 +734,6 @@ function ExpenseTracker() {
       date: isoDate
     })
     setIsEditDialogOpen(true)
-    setOpenDropdown(null)
   }
 
 

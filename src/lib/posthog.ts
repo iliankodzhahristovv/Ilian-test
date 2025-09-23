@@ -12,7 +12,7 @@ export const initPostHog = () => {
         person_profiles: 'identified_only',
         capture_pageview: false, // We'll capture manually
         capture_pageleave: true,
-        loaded: (posthog) => {
+        loaded: () => {
           if (process.env.NODE_ENV === 'development') console.log('PostHog loaded')
         }
       })
@@ -23,7 +23,7 @@ export const initPostHog = () => {
 }
 
 // Event tracking helper functions
-export const trackEvent = (eventName: string, properties?: any) => {
+export const trackEvent = (eventName: string, properties?: Record<string, unknown>) => {
   if (typeof window !== 'undefined' && posthog) {
     posthog.capture(eventName, properties)
   }

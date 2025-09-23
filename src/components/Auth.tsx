@@ -27,8 +27,8 @@ export default function Auth() {
         await signUp(email, password)
         setError('Check your email for the confirmation link!')
       }
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)
     }
