@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { trackUserEvent } from '@/lib/posthog'
 
 interface AuthContextType {
   user: User | null
@@ -49,11 +50,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
     })
     if (error) throw error
+    
+    // Track successful sign up
+    if (data.user) {
+      trackUserEvent.signedUp(data.user.id)
+    }
   }
 
   const signIn = async (email: string, password: string) => {
@@ -65,6 +71,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
+    // Track sign out before actually signing out
+    trackUserEvent.signedOut()
+    
     const { error } = await supabase.auth.signOut()
     if (error) throw error
   }

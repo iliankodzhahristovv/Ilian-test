@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import type { Expense } from './supabase'
+import { trackExpenseEvent, trackEvent } from './posthog'
 
 // Get user's expenses
 export async function getExpenses(): Promise<Expense[]> {
@@ -12,6 +13,11 @@ export async function getExpenses(): Promise<Expense[]> {
     console.error('Error fetching expenses:', error)
     return []
   }
+
+  // Track expenses view
+  trackEvent('expenses_viewed', { 
+    expense_count: data?.length || 0 
+  })
 
   return data || []
 }
@@ -38,6 +44,13 @@ export async function addExpense(expense: Omit<Expense, 'id' | 'user_id' | 'crea
       return null
     }
 
+    // Track successful expense addition
+    trackExpenseEvent.added({
+      amount: expense.amount,
+      category: expense.category,
+      description: expense.description
+    })
+
     return data
   } catch (error) {
     console.error('addExpense failed:', error)
@@ -63,6 +76,13 @@ export async function updateExpense(id: string, updates: Partial<Expense>): Prom
       return null
     }
 
+    // Track successful expense update
+    trackExpenseEvent.edited({
+      amount: data.amount,
+      category: data.category,
+      expenseId: id
+    })
+
     return data
   } catch (error) {
     console.error('updateExpense failed:', error)
@@ -82,6 +102,9 @@ export async function deleteExpense(id: string): Promise<boolean> {
       console.error('Error deleting expense:', error)
       return false
     }
+
+    // Track successful expense deletion
+    trackExpenseEvent.deleted(id)
 
     return true
   } catch (error) {

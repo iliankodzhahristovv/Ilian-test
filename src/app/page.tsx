@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { getExpenses, addExpense, updateExpense, deleteExpense } from '@/lib/expenses'
 import type { Expense } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { trackEvent } from '@/lib/posthog'
 import Auth from '@/components/Auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -329,8 +330,8 @@ function ChartsPage({ expenses }: { expenses: Expense[] }) {
                   </div>
 
                   <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={yearlyChartData[selectedCategory]}>
+                    <ResponsiveContainer width="100%" height="100%" margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                      <LineChart data={yearlyChartData[selectedCategory]} margin={{ top: 10, right: 20, left: 20, bottom: 10 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                         <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#6b7280" }} />
                         <YAxis
@@ -338,6 +339,7 @@ function ChartsPage({ expenses }: { expenses: Expense[] }) {
                           tickLine={false}
                           tick={{ fontSize: 12, fill: "#6b7280" }}
                           tickFormatter={(value) => `${value} лв`}
+                          width={60}
                         />
                         <Tooltip
                           contentStyle={{
@@ -1188,10 +1190,8 @@ function ExpenseTracker() {
                       className="cursor-pointer hover:bg-gray-50 transition-colors"
                       onClick={() => {
                         toggleMonth(monthKey)
-                        // Auto-select month when expanding
-                        if (!isExpanded) {
-                          handleMonthSelect(monthKey)
-                        }
+                        // Always select month when clicking (for summary stats)
+                        handleMonthSelect(monthKey)
                       }}
                     >
                       <div className="flex items-center justify-between">
