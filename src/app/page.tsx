@@ -1160,21 +1160,21 @@ function ExpenseTracker() {
                             }`} />
                           </div>
                           <div>
-                            <CardTitle className={`text-lg transition-colors ${
+                            <CardTitle className={`text-sm sm:text-lg transition-colors ${
                               showAsSelected ? 'text-blue-700' : ''
                             }`}>
                               {formatMonthDisplay(monthKey)}
                             </CardTitle>
-                            <p className="text-sm text-gray-600">{monthExpenses.length} transactions</p>
+                            <p className="text-xs sm:text-sm text-gray-600">{monthExpenses.length} transactions</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className={`text-xl font-bold transition-colors ${
+                          <div className={`text-lg sm:text-xl font-bold transition-colors ${
                             showAsSelected ? 'text-blue-700' : 'text-gray-900'
                           }`}>
                             {monthTotal.toFixed(2)} лв
                           </div>
-                          <div className="text-sm text-gray-500">€{(monthTotal / BGN_TO_EUR_RATE).toFixed(2)}</div>
+                          <div className="text-xs sm:text-sm text-gray-500">€{(monthTotal / BGN_TO_EUR_RATE).toFixed(2)}</div>
                         </div>
                       </div>
                     </CardHeader>
