@@ -11,30 +11,209 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Filter, DollarSign, Calendar, TrendingUp, Edit, Trash2, Copy, ArrowUpDown, ChevronUp, ChevronDown, ChevronRight, Menu, Home, Settings, BarChart3, X } from 'lucide-react'
+import { Plus, DollarSign, Calendar, TrendingUp, Edit, Trash2, Copy, ArrowUpDown, ChevronUp, ChevronDown, ChevronRight, Menu, Home, Settings, BarChart3, X } from 'lucide-react'
 import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
 // Utility function for category colors (badges)
-const getCategoryColor = (category: string) => {
-  const colors: { [key: string]: string } = {
+const getCategoryColor = (category: string, customCategories?: Array<{name: string, color: string}>) => {
+  // Default category colors (matching categoryBadgeColors)
+  const defaultColors: { [key: string]: string } = {
     'Food': 'bg-green-100 text-green-800',
     'Gas': 'bg-yellow-100 text-yellow-800',
-    'Entertainment': 'bg-red-100 text-red-800',
+    'Entertainment': 'bg-pink-100 text-pink-800',
     'Planned': 'bg-blue-100 text-blue-800',
     'Car': 'bg-purple-100 text-purple-800',
-    'Fitness': 'bg-emerald-400 text-emerald-900',
+    'Fitness': 'bg-emerald-100 text-emerald-800',
     'Clothes': 'bg-yellow-300 text-yellow-900',
     'Necessary': 'bg-orange-100 text-orange-800',
     'Barber': 'bg-gray-100 text-gray-800',
   }
-  return colors[category] || 'bg-gray-100 text-gray-800'
+  
+  // Check if it's a default category
+  if (defaultColors[category]) {
+    return defaultColors[category]
+  }
+  
+  // Check if it's a custom category
+  if (customCategories) {
+    const customCategory = customCategories.find(cat => cat.name === category)
+    if (customCategory) {
+      const colorMap: { [key: string]: string } = {
+        // Current category colors
+        'pink': 'bg-pink-100 text-pink-800',
+        'blue': 'bg-blue-100 text-blue-800',
+        'green': 'bg-green-100 text-green-800',
+        'yellow': 'bg-yellow-100 text-yellow-800',
+        'neon-yellow': 'bg-yellow-300 text-yellow-900',
+        'purple': 'bg-purple-100 text-purple-800',
+        'emerald': 'bg-emerald-100 text-emerald-800',
+        'orange': 'bg-orange-100 text-orange-800',
+        'gray': 'bg-gray-100 text-gray-800',
+        
+        // Additional color options
+        'red': 'bg-red-100 text-red-800',
+        'indigo': 'bg-indigo-100 text-indigo-800',
+        'teal': 'bg-teal-100 text-teal-800',
+        'cyan': 'bg-cyan-100 text-cyan-800',
+        'lime': 'bg-lime-100 text-lime-800',
+        'amber': 'bg-amber-100 text-amber-800',
+        'rose': 'bg-rose-100 text-rose-800',
+        'slate': 'bg-slate-100 text-slate-800',
+        'violet': 'bg-violet-100 text-violet-800',
+        'sky': 'bg-sky-100 text-sky-800',
+        'stone': 'bg-stone-100 text-stone-800',
+        'neutral': 'bg-neutral-100 text-neutral-800',
+        'white': 'bg-white text-gray-800 border border-gray-300',
+      }
+      return colorMap[customCategory.color] || 'bg-gray-100 text-gray-800'
+    }
+  }
+  
+  return 'bg-gray-100 text-gray-800'
 }
 
 
 
 // Settings Page Component
-function SettingsPage() {
+function SettingsPage({ 
+  allCategories, 
+  setAllCategories,
+  expenses
+}: { 
+  allCategories: Array<{name: string, color: string, isDefault: boolean}>, 
+  setAllCategories: (categories: Array<{name: string, color: string, isDefault: boolean}>) => void,
+  expenses: Expense[]
+}) {
   const { user, signOut } = useAuth()
+  
+  const [selectedCategory, setSelectedCategory] = useState('')
+  const [selectedColor, setSelectedColor] = useState('pink')
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [isAddingNewCategory, setIsAddingNewCategory] = useState(false)
+  
+  // Save all categories to localStorage
+  const saveAllCategories = (categories: Array<{name: string, color: string, isDefault: boolean}>) => {
+    localStorage.setItem('allCategories', JSON.stringify(categories))
+    setAllCategories(categories)
+    
+    // Also save custom categories for backward compatibility
+    const customOnly = categories.filter(cat => !cat.isDefault).map(cat => ({ name: cat.name, color: cat.color }))
+    localStorage.setItem('customCategories', JSON.stringify(customOnly))
+  }
+  
+  // Update selected category's color or create new category
+  const handleUpdateCategoryColor = () => {
+    if (isAddingNewCategory) {
+      // Create new category
+      if (newCategoryName.trim()) {
+        const newCategory = {
+          name: newCategoryName.trim(),
+          color: selectedColor,
+          isDefault: false
+        }
+        const updated = [...allCategories, newCategory]
+        saveAllCategories(updated)
+        setNewCategoryName('')
+        setIsAddingNewCategory(false)
+        setSelectedCategory('')
+      }
+    } else if (selectedCategory) {
+      // Update existing category
+      const updated = allCategories.map(cat => 
+        cat.name === selectedCategory 
+          ? { ...cat, color: selectedColor }
+          : cat
+      )
+      saveAllCategories(updated)
+      // Clear selection to hide Update/Remove buttons
+      setSelectedCategory('')
+    }
+  }
+  
+  
+  // Start adding new category
+  const handleStartAddingCategory = () => {
+    setIsAddingNewCategory(true)
+    setSelectedColor('white')
+    setNewCategoryName('')
+    setSelectedCategory('')
+  }
+  
+  // Check if category is being used by any expenses
+  const isCategoryInUse = (categoryName: string) => {
+    return expenses.some(expense => expense.category === categoryName)
+  }
+  
+  // Remove category (only if not in use and not default)
+  const handleRemoveCategory = (categoryName: string) => {
+    const updated = allCategories.filter(cat => cat.name !== categoryName)
+    saveAllCategories(updated)
+    setSelectedCategory('')
+  }
+  
+  
+  // Get category color class
+  const getCategoryColorClass = (categoryName: string) => {
+    const category = allCategories.find(cat => cat.name === categoryName)
+    if (!category) return 'bg-gray-100 text-gray-800'
+    
+    const colorMap: { [key: string]: string } = {
+      // Current category colors
+      'pink': 'bg-pink-100 text-pink-800',
+      'blue': 'bg-blue-100 text-blue-800',
+      'green': 'bg-green-100 text-green-800',
+      'yellow': 'bg-yellow-100 text-yellow-800',
+      'neon-yellow': 'bg-yellow-300 text-yellow-900',
+      'purple': 'bg-purple-100 text-purple-800',
+      'emerald': 'bg-emerald-100 text-emerald-800',
+      'orange': 'bg-orange-100 text-orange-800',
+      'gray': 'bg-gray-100 text-gray-800',
+      
+      // Additional color options
+      'red': 'bg-red-100 text-red-800',
+      'indigo': 'bg-indigo-100 text-indigo-800',
+      'teal': 'bg-teal-100 text-teal-800',
+      'cyan': 'bg-cyan-100 text-cyan-800',
+      'lime': 'bg-lime-100 text-lime-800',
+      'amber': 'bg-amber-100 text-amber-800',
+      'rose': 'bg-rose-100 text-rose-800',
+      'slate': 'bg-slate-100 text-slate-800',
+      'violet': 'bg-violet-100 text-violet-800',
+      'sky': 'bg-sky-100 text-sky-800',
+      'stone': 'bg-stone-100 text-stone-800',
+      'neutral': 'bg-neutral-100 text-neutral-800',
+    }
+    return colorMap[category.color] || 'bg-gray-100 text-gray-800'
+  }
+
+  // Color options - expanded selection for customization
+  const colorOptions = [
+    // Current category colors
+    { value: 'pink', label: 'Pink', bg: 'bg-pink-100 text-pink-800', solid: 'bg-pink-500' }, // Entertainment
+    { value: 'yellow', label: 'Yellow', bg: 'bg-yellow-100 text-yellow-800', solid: 'bg-yellow-500' }, // Gas
+    { value: 'neon-yellow', label: 'Neon Yellow', bg: 'bg-yellow-300 text-yellow-900', solid: 'bg-yellow-400' }, // Clothes
+    { value: 'green', label: 'Green', bg: 'bg-green-100 text-green-800', solid: 'bg-green-500' }, // Food
+    { value: 'blue', label: 'Blue', bg: 'bg-blue-100 text-blue-800', solid: 'bg-blue-500' }, // Planned
+    { value: 'purple', label: 'Purple', bg: 'bg-purple-100 text-purple-800', solid: 'bg-purple-500' }, // Car
+    { value: 'emerald', label: 'Emerald', bg: 'bg-emerald-100 text-emerald-800', solid: 'bg-emerald-500' }, // Fitness
+    { value: 'orange', label: 'Orange', bg: 'bg-orange-100 text-orange-800', solid: 'bg-orange-500' }, // Necessary
+    { value: 'gray', label: 'Gray', bg: 'bg-gray-100 text-gray-800', solid: 'bg-gray-500' }, // Barber
+    
+    // Additional color options
+    { value: 'red', label: 'Red', bg: 'bg-red-100 text-red-800', solid: 'bg-red-500' },
+    { value: 'indigo', label: 'Indigo', bg: 'bg-indigo-100 text-indigo-800', solid: 'bg-indigo-500' },
+    { value: 'teal', label: 'Teal', bg: 'bg-teal-100 text-teal-800', solid: 'bg-teal-500' },
+    { value: 'cyan', label: 'Cyan', bg: 'bg-cyan-100 text-cyan-800', solid: 'bg-cyan-500' },
+    { value: 'lime', label: 'Lime', bg: 'bg-lime-100 text-lime-800', solid: 'bg-lime-500' },
+    { value: 'amber', label: 'Amber', bg: 'bg-amber-100 text-amber-800', solid: 'bg-amber-500' },
+    { value: 'rose', label: 'Rose', bg: 'bg-rose-100 text-rose-800', solid: 'bg-rose-500' },
+    { value: 'slate', label: 'Slate', bg: 'bg-slate-100 text-slate-800', solid: 'bg-slate-500' },
+    { value: 'violet', label: 'Violet', bg: 'bg-violet-100 text-violet-800', solid: 'bg-violet-500' },
+    { value: 'sky', label: 'Sky', bg: 'bg-sky-100 text-sky-800', solid: 'bg-sky-500' },
+    { value: 'stone', label: 'Stone', bg: 'bg-stone-100 text-stone-800', solid: 'bg-stone-500' },
+    { value: 'neutral', label: 'Neutral', bg: 'bg-neutral-100 text-neutral-800', solid: 'bg-neutral-500' },
+    { value: 'white', label: 'White', bg: 'bg-white text-gray-800 border border-gray-300', solid: 'bg-white border border-gray-400' },
+  ]
 
   return (
     <div className="space-y-6">
@@ -105,6 +284,128 @@ function SettingsPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Category Management */}
+            <div className="border-t pt-4">
+              <div className="mb-4">
+                <label className="text-sm font-medium text-gray-700">Category Management</label>
+                <p className="text-xs text-gray-500">Manage all expense categories and their colors</p>
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Select Category to Edit:</label>
+                </div>
+                
+                <Select 
+                  value={selectedCategory}
+                  onValueChange={(value) => {
+                    if (value === "__add_new__") {
+                      handleStartAddingCategory()
+                      return
+                    }
+                    setSelectedCategory(value)
+                    setIsAddingNewCategory(false)
+                    // Auto-set color picker to current category color
+                    const category = allCategories.find(cat => cat.name === value)
+                    if (category) {
+                      setSelectedColor(category.color)
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <div className="flex items-center gap-2">
+                      {selectedCategory ? (
+                        <>
+                          <span className={`px-2 py-1 rounded-md text-xs font-medium ${getCategoryColorClass(selectedCategory)}`}>
+                            {selectedCategory}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          {isAddingNewCategory ? 'Adding new category...' : 'Choose category to edit...'}
+                        </span>
+                      )}
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__add_new__">
+                      <div className="flex items-center justify-center text-gray-500">
+                        <Plus className="h-4 w-4" />
+                      </div>
+                    </SelectItem>
+                    {allCategories.map((category) => (
+                      <SelectItem key={category.name} value={category.name}>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 rounded-md text-xs font-medium ${getCategoryColorClass(category.name)}`}>
+                            {category.name}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* New Category Input */}
+                {isAddingNewCategory && (
+                  <Input
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="Enter category name"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleUpdateCategoryColor()
+                      }
+                    }}
+                  />
+                )}
+
+                {/* Color Picker and Actions */}
+                {(selectedCategory || isAddingNewCategory) && (
+                  <div className="flex gap-2">
+                    <Select value={selectedColor} onValueChange={setSelectedColor}>
+                      <SelectTrigger className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded-full ${colorOptions.find(c => c.value === selectedColor)?.solid || 'bg-gray-500'} border border-gray-300`}></div>
+                          <span className="capitalize">{selectedColor.replace('-', ' ')}</span>
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {colorOptions.map((color) => (
+                          <SelectItem key={color.value} value={color.value}>
+                            <div className="flex items-center gap-2">
+                              <div className={`w-4 h-4 rounded-full ${color.solid} border border-gray-300`}></div>
+                              {color.label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button 
+                      onClick={handleUpdateCategoryColor}
+                      size="sm"
+                      className="px-4"
+                      disabled={isAddingNewCategory && !newCategoryName.trim()}
+                    >
+                      {isAddingNewCategory ? 'Create' : 'Update'}
+                    </Button>
+                    {!isAddingNewCategory && 
+                     selectedCategory && 
+                     !allCategories.find(cat => cat.name === selectedCategory)?.isDefault && 
+                     !isCategoryInUse(selectedCategory) && (
+                      <Button 
+                        onClick={() => handleRemoveCategory(selectedCategory)}
+                        size="sm"
+                        variant="destructive"
+                        className="px-3"
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -159,7 +460,13 @@ function SettingsPage() {
 }
 
 // Charts Page Component using Recharts  
-function ChartsPage({ expenses }: { expenses: Expense[] }) {
+function ChartsPage({ 
+  expenses, 
+  allCategories 
+}: { 
+  expenses: Expense[], 
+  allCategories: Array<{name: string, color: string, isDefault: boolean}> 
+}) {
   const [selectedCategory, setSelectedCategory] = React.useState<string>("Entertainment")
 
   // Calculate category data from actual expenses
@@ -226,16 +533,38 @@ function ChartsPage({ expenses }: { expenses: Expense[] }) {
   }, [categoryData, selectedCategory])
 
 
-  const categoryBadgeColors = {
-    Entertainment: "bg-pink-100 text-pink-800 hover:bg-pink-200",
-    Gas: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200",
-    Food: "bg-green-100 text-green-800 hover:bg-green-200", 
-    Necessary: "bg-orange-100 text-orange-800 hover:bg-orange-200",
-    Car: "bg-purple-100 text-purple-800 hover:bg-purple-200",
-    Planned: "bg-blue-100 text-blue-800 hover:bg-blue-200",
-    Clothes: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200",
-    Fitness: "bg-emerald-100 text-emerald-800 hover:bg-emerald-200",
-    Barber: "bg-gray-100 text-gray-800 hover:bg-gray-200",
+  // Get category color using centralized system
+  const getCategoryColorFromProps = (categoryName: string) => {
+    const category = allCategories.find(cat => cat.name === categoryName)
+    if (!category) return 'bg-gray-100 text-gray-800'
+    
+    const colorMap: { [key: string]: string } = {
+      // Current category colors
+      'pink': 'bg-pink-100 text-pink-800',
+      'blue': 'bg-blue-100 text-blue-800',
+      'green': 'bg-green-100 text-green-800',
+      'yellow': 'bg-yellow-100 text-yellow-800',
+      'neon-yellow': 'bg-yellow-300 text-yellow-900',
+      'purple': 'bg-purple-100 text-purple-800',
+      'emerald': 'bg-emerald-100 text-emerald-800',
+      'orange': 'bg-orange-100 text-orange-800',
+      'gray': 'bg-gray-100 text-gray-800',
+      
+      // Additional color options
+      'red': 'bg-red-100 text-red-800',
+      'indigo': 'bg-indigo-100 text-indigo-800',
+      'teal': 'bg-teal-100 text-teal-800',
+      'cyan': 'bg-cyan-100 text-cyan-800',
+      'lime': 'bg-lime-100 text-lime-800',
+      'amber': 'bg-amber-100 text-amber-800',
+      'rose': 'bg-rose-100 text-rose-800',
+      'slate': 'bg-slate-100 text-slate-800',
+      'violet': 'bg-violet-100 text-violet-800',
+      'sky': 'bg-sky-100 text-sky-800',
+      'stone': 'bg-stone-100 text-stone-800',
+      'neutral': 'bg-neutral-100 text-neutral-800',
+    }
+    return colorMap[category.color] || 'bg-gray-100 text-gray-800'
   }
 
   return (
@@ -281,9 +610,8 @@ function ChartsPage({ expenses }: { expenses: Expense[] }) {
                   >
                     <div className="text-left space-y-1">
                       <span
-                        className={`px-2 py-1 rounded-md text-xs font-medium ${
-                          categoryBadgeColors[category.name as keyof typeof categoryBadgeColors] || "bg-gray-100 text-gray-800"
-                        }`}
+                        className={`px-1.5 py-0.5 rounded-md text-xs font-medium truncate block ${getCategoryColorFromProps(category.name)}`}
+                        title={category.name}
                       >
                         {category.name}
                       </span>
@@ -348,6 +676,114 @@ function ExpenseTracker() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
+  
+  // All categories state (centralized) - shared with Settings
+  const [allCategories, setAllCategories] = useState<Array<{name: string, color: string, isDefault: boolean}>>([])
+  
+  // Initialize default categories with their colors
+  const initializeCategories = () => {
+    const defaultCats = [
+      { name: 'Food', color: 'green', isDefault: true },
+      { name: 'Gas', color: 'yellow', isDefault: true },
+      { name: 'Entertainment', color: 'pink', isDefault: true },
+      { name: 'Planned', color: 'blue', isDefault: true },
+      { name: 'Car', color: 'purple', isDefault: true },
+      { name: 'Fitness', color: 'emerald', isDefault: true },
+      { name: 'Clothes', color: 'neon-yellow', isDefault: true },
+      { name: 'Necessary', color: 'orange', isDefault: true },
+      { name: 'Barber', color: 'gray', isDefault: true },
+    ]
+    return defaultCats
+  }
+  
+  // Load and merge categories on mount
+  useEffect(() => {
+    const defaultCats = initializeCategories()
+    const saved = localStorage.getItem('allCategories')
+    
+    if (saved) {
+      // Load saved categories (which may include modified default colors)
+      const savedCategories = JSON.parse(saved)
+      setAllCategories(savedCategories)
+    } else {
+      // First time - use default categories
+      setAllCategories(defaultCats)
+      localStorage.setItem('allCategories', JSON.stringify(defaultCats))
+    }
+  }, [])
+  
+  // Get all category names
+  const getAllCategories = () => {
+    return allCategories.map(cat => cat.name)
+  }
+  
+  // Get category color using centralized system
+  const getCategoryColorFromState = (categoryName: string) => {
+    const category = allCategories.find(cat => cat.name === categoryName)
+    if (!category) return 'bg-gray-100 text-gray-800'
+    
+    const colorMap: { [key: string]: string } = {
+      // Current category colors
+      'pink': 'bg-pink-100 text-pink-800',
+      'blue': 'bg-blue-100 text-blue-800',
+      'green': 'bg-green-100 text-green-800',
+      'yellow': 'bg-yellow-100 text-yellow-800',
+      'neon-yellow': 'bg-yellow-300 text-yellow-900',
+      'purple': 'bg-purple-100 text-purple-800',
+      'emerald': 'bg-emerald-100 text-emerald-800',
+      'orange': 'bg-orange-100 text-orange-800',
+      'gray': 'bg-gray-100 text-gray-800',
+      
+      // Additional color options
+      'red': 'bg-red-100 text-red-800',
+      'indigo': 'bg-indigo-100 text-indigo-800',
+      'teal': 'bg-teal-100 text-teal-800',
+      'cyan': 'bg-cyan-100 text-cyan-800',
+      'lime': 'bg-lime-100 text-lime-800',
+      'amber': 'bg-amber-100 text-amber-800',
+      'rose': 'bg-rose-100 text-rose-800',
+      'slate': 'bg-slate-100 text-slate-800',
+      'violet': 'bg-violet-100 text-violet-800',
+      'sky': 'bg-sky-100 text-sky-800',
+      'stone': 'bg-stone-100 text-stone-800',
+      'neutral': 'bg-neutral-100 text-neutral-800',
+    }
+    return colorMap[category.color] || 'bg-gray-100 text-gray-800'
+  }
+  
+  // Get progress bar color (darker version for bars)
+  const getProgressBarColor = (categoryName: string) => {
+    const category = allCategories.find(cat => cat.name === categoryName)
+    if (!category) return 'bg-gray-600'
+    
+    const progressColorMap: { [key: string]: string } = {
+      // Current category colors (darker versions for progress bars)
+      'pink': 'bg-pink-600',
+      'blue': 'bg-blue-600',
+      'green': 'bg-green-600',
+      'yellow': 'bg-yellow-600',
+      'neon-yellow': 'bg-yellow-500',
+      'purple': 'bg-purple-600',
+      'emerald': 'bg-emerald-600',
+      'orange': 'bg-orange-600',
+      'gray': 'bg-gray-600',
+      
+      // Additional color options
+      'red': 'bg-red-600',
+      'indigo': 'bg-indigo-600',
+      'teal': 'bg-teal-600',
+      'cyan': 'bg-cyan-600',
+      'lime': 'bg-lime-600',
+      'amber': 'bg-amber-600',
+      'rose': 'bg-rose-600',
+      'slate': 'bg-slate-600',
+      'violet': 'bg-violet-600',
+      'sky': 'bg-sky-600',
+      'stone': 'bg-stone-600',
+      'neutral': 'bg-neutral-600',
+    }
+    return progressColorMap[category.color] || 'bg-gray-600'
+  }
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -364,7 +800,6 @@ function ExpenseTracker() {
     category: '',
     date: ''
   })
-  const [filterCategory, setFilterCategory] = useState<string>('')
   const [sortConfig, setSortConfig] = useState<{
     column: 'date' | 'category' | 'amount' | 'description'
     direction: 'asc' | 'desc'
@@ -476,13 +911,8 @@ function ExpenseTracker() {
   }
 
   const filteredAndSortedExpenses = (() => {
-    // First apply category filter
-    const filtered = filterCategory 
-    ? expenses.filter(expense => expense.category === filterCategory)
-    : expenses
-
-    // Then sort by the selected criteria
-    return filtered.sort((a, b) => {
+    // Sort expenses by the selected criteria
+    return expenses.sort((a, b) => {
       let result = 0
 
       switch (sortConfig.column) {
@@ -554,7 +984,7 @@ function ExpenseTracker() {
     }
   })()
 
-  const categories = Array.from(new Set(expenses.map(expense => expense.category)))
+  const categories = getAllCategories()
 
   // Group filtered and sorted expenses by month
   const groupedExpenses = groupExpensesByMonth(filteredAndSortedExpenses)
@@ -607,7 +1037,7 @@ function ExpenseTracker() {
 
 
   const handleAddExpense = async () => {
-    if (newExpense.description && newExpense.amount && newExpense.category && newExpense.date) {
+    if (newExpense.amount && newExpense.category && newExpense.date) {
       try {
         // Convert YYYY-MM-DD to DD/MM/YYYY format for display
         const [year, month, day] = newExpense.date.split('-')
@@ -643,7 +1073,7 @@ function ExpenseTracker() {
   }
 
   const handleEditExpense = async () => {
-    if (editingExpense && editExpense.description && editExpense.amount && editExpense.category && editExpense.date) {
+    if (editingExpense && editExpense.amount && editExpense.category && editExpense.date) {
       try {
         // Convert YYYY-MM-DD to DD/MM/YYYY format for display
         const [year, month, day] = editExpense.date.split('-')
@@ -902,27 +1332,22 @@ function ExpenseTracker() {
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Food">Food</SelectItem>
-                      <SelectItem value="Gas">Gas</SelectItem>
-                      <SelectItem value="Entertainment">Entertainment</SelectItem>
-                      <SelectItem value="Planned">Planned</SelectItem>
-                      <SelectItem value="Car">Car</SelectItem>
-                      <SelectItem value="Fitness">Fitness</SelectItem>
-                      <SelectItem value="Clothes">Clothes</SelectItem>
-                      <SelectItem value="Necessary">Necessary</SelectItem>
-                      <SelectItem value="Barber">Barber</SelectItem>
+                      {getAllCategories().map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description <span className="text-red-500">*</span>
+                    Description
                   </label>
                   <Input
                     placeholder="Enter description..."
                     value={newExpense.description}
                     onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
-                    required
                   />
                 </div>
                 <div>
@@ -971,27 +1396,22 @@ function ExpenseTracker() {
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Food">Food</SelectItem>
-                      <SelectItem value="Gas">Gas</SelectItem>
-                      <SelectItem value="Entertainment">Entertainment</SelectItem>
-                      <SelectItem value="Planned">Planned</SelectItem>
-                      <SelectItem value="Car">Car</SelectItem>
-                      <SelectItem value="Fitness">Fitness</SelectItem>
-                      <SelectItem value="Clothes">Clothes</SelectItem>
-                      <SelectItem value="Necessary">Necessary</SelectItem>
-                      <SelectItem value="Barber">Barber</SelectItem>
+                      {getAllCategories().map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description <span className="text-red-500">*</span>
+                    Description
                   </label>
                   <Input
                     placeholder="Enter description..."
                     value={editExpense.description}
                     onChange={(e) => setEditExpense({ ...editExpense, description: e.target.value })}
-                    required
                   />
                 </div>
                 <div>
@@ -1080,34 +1500,6 @@ function ExpenseTracker() {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            <span className="text-sm font-medium">Filters:</span>
-          </div>
-          <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="All categories" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((category) => (
-                <SelectItem key={category} value={category}>
-                  {category}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {filterCategory && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setFilterCategory('')}
-            >
-              Clear filter
-            </Button>
-          )}
-        </div>
 
         {/* Expenses by Month */}
         <div className="space-y-4">
@@ -1193,7 +1585,7 @@ function ExpenseTracker() {
                                 className="p-3 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow"
                               >
                                 <div className="flex items-center justify-between mb-2">
-                                  <Badge className={`${getCategoryColor(item.category)} text-xs font-medium`}>
+                                  <Badge className={`${getCategoryColorFromState(item.category)} text-xs font-medium`}>
                                     {item.category}
                                   </Badge>
                                   <span className="text-xs text-gray-500">
@@ -1218,18 +1610,7 @@ function ExpenseTracker() {
                                   {/* Progress Bar */}
                                   <div className="w-full bg-gray-200 rounded-full h-4">
                                     <div 
-                                      className={`h-4 rounded-full transition-all duration-300 shadow-sm ${
-                                        item.category === 'Food' ? 'bg-green-600' :
-                                        item.category === 'Entertainment' ? 'bg-red-600' :
-                                        item.category === 'Gas' ? 'bg-yellow-600' :
-                                        item.category === 'Planned' ? 'bg-blue-600' :
-                                        item.category === 'Car' ? 'bg-purple-600' :
-                                        item.category === 'Fitness' ? 'bg-emerald-600' :
-                                        item.category === 'Clothes' ? 'bg-yellow-500' :
-                                        item.category === 'Necessary' ? 'bg-orange-600' :
-                                        item.category === 'Barber' ? 'bg-gray-600' :
-                                        'bg-gray-600'
-                                      }`}
+                                      className={`h-4 rounded-full transition-all duration-300 shadow-sm ${getProgressBarColor(item.category)}`}
                                       style={{ width: `${item.percentage}%` }}
                                     ></div>
                                   </div>
@@ -1290,7 +1671,7 @@ function ExpenseTracker() {
                           <div className="font-medium text-gray-900">{expense.description}</div>
                         </td>
                         <td className="py-4 px-4">
-                          <Badge className={getCategoryColor(expense.category)}>
+                          <Badge className={getCategoryColorFromState(expense.category)}>
                             {expense.category}
                           </Badge>
                         </td>
@@ -1351,8 +1732,8 @@ function ExpenseTracker() {
               </div>
             )}
             
-            {currentPage === 'settings' && <SettingsPage />}
-            {currentPage === 'charts' && <ChartsPage expenses={expenses} />}
+            {currentPage === 'settings' && <SettingsPage allCategories={allCategories} setAllCategories={setAllCategories} expenses={expenses} />}
+            {currentPage === 'charts' && <ChartsPage expenses={expenses} allCategories={allCategories} />}
           </div>
         </div>
       </div>
