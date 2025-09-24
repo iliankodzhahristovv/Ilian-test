@@ -312,7 +312,7 @@ function ChartsPage({ expenses }: { expenses: Expense[] }) {
                           tickLine={false}
                           tick={{ fontSize: 12, fill: "#6b7280" }}
                           tickFormatter={(value) => `${value} лв`}
-                          width={60}
+                          width={80}
                         />
                         <Tooltip
                           contentStyle={{
@@ -876,7 +876,7 @@ function ExpenseTracker() {
                   Add Expense
                 </Button>
               </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="!w-[calc(100vw-3rem)] !max-w-md rounded-lg sm:!w-[calc(100vw-4rem)]">
               <DialogHeader>
                 <DialogTitle>Add New Expense</DialogTitle>
               </DialogHeader>
@@ -945,7 +945,7 @@ function ExpenseTracker() {
 
           {/* Edit Dialog */}
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent>
+            <DialogContent className="mx-10 rounded-lg max-w-md sm:mx-8">
               <DialogHeader>
                 <DialogTitle>Edit Expense</DialogTitle>
               </DialogHeader>
