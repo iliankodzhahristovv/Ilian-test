@@ -312,7 +312,7 @@ function ChartsPage({ expenses }: { expenses: Expense[] }) {
                           tickLine={false}
                           tick={{ fontSize: 12, fill: "#6b7280" }}
                           tickFormatter={(value) => `${value} лв`}
-                          width={60}
+                          width={80}
                         />
                         <Tooltip
                           contentStyle={{
@@ -876,7 +876,7 @@ function ExpenseTracker() {
                   Add Expense
                 </Button>
               </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="!w-[calc(100vw-3rem)] !max-w-md rounded-lg sm:!w-[calc(100vw-4rem)]">
               <DialogHeader>
                 <DialogTitle>Add New Expense</DialogTitle>
               </DialogHeader>
@@ -945,7 +945,7 @@ function ExpenseTracker() {
 
           {/* Edit Dialog */}
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent>
+            <DialogContent className="mx-10 rounded-lg max-w-md sm:mx-8">
               <DialogHeader>
                 <DialogTitle>Edit Expense</DialogTitle>
               </DialogHeader>
@@ -1160,21 +1160,21 @@ function ExpenseTracker() {
                             }`} />
                           </div>
                           <div>
-                            <CardTitle className={`text-lg transition-colors ${
+                            <CardTitle className={`text-sm sm:text-lg transition-colors ${
                               showAsSelected ? 'text-blue-700' : ''
                             }`}>
                               {formatMonthDisplay(monthKey)}
                             </CardTitle>
-                            <p className="text-sm text-gray-600">{monthExpenses.length} transactions</p>
+                            <p className="text-xs sm:text-sm text-gray-600">{monthExpenses.length} transactions</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className={`text-xl font-bold transition-colors ${
+                          <div className={`text-lg sm:text-xl font-bold transition-colors ${
                             showAsSelected ? 'text-blue-700' : 'text-gray-900'
                           }`}>
                             {monthTotal.toFixed(2)} лв
                           </div>
-                          <div className="text-sm text-gray-500">€{(monthTotal / BGN_TO_EUR_RATE).toFixed(2)}</div>
+                          <div className="text-xs sm:text-sm text-gray-500">€{(monthTotal / BGN_TO_EUR_RATE).toFixed(2)}</div>
                         </div>
                       </div>
                     </CardHeader>
